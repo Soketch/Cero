@@ -1,10 +1,13 @@
-# Cero
+# Cero   
 
 ## 介绍
 Cero是采用c++构建的MySQL的ORM库.
 
 **项目架构:**<br>
-$~~~~~~$ 👉 [Cero::framework](./framework.md)
+$~~~~~~$ 👉 [Cero::framework](./doc/framework.md)
+
+**other**<br>
+$~~~~~~$ 👉 [SQL com](./doc/数据库命令.md)
 
 ## 设计目标
 一.  **构建一个性能不错的Mysql的ORM库**
@@ -19,13 +22,16 @@ $~~~~~~$ 👉 [Cero::framework](./framework.md)
 ## ORM核心组件
 设计和实现ORM库的核心组件：
 <ol>
-<li><b>模型类</b>：定义数据表对应的C++类，并映射表的字段到类的成员变量。</li>
-<li><b>查询构建器</b>：提供链式接口构建SQL查询。</li>
-<li><b>数据映射</b>：将查询结果映射到相应的C++对象。</li>
-<ol>
+    <li><b>模型类</b>：定义数据表对应的C++类，并映射表的字段到类的成员变量。</li>
+    <li><b>查询构建器</b>：提供链式接口构建SQL查询。</li>
+    <li><b>数据映射</b>：将查询结果映射到相应的C++对象。</li>
+</ol>
+<br>
+
 
 ## 缓存机制
 
 ## 异步操作
+
 
 ## 错误处理

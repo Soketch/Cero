@@ -29,6 +29,7 @@ else()
   message(FATAL_ERROR "Could not find MySQL Connector/C++ library")
 endif()
 
+
 set(SQL_LIBS
     sql/connection.cpp
 )
@@ -36,8 +37,12 @@ set(SQL_LIBS
 
 # 添加源文件
 add_executable(mysql_test sql/connection.cpp)
-
 # 链接MySQL Connector/C++库
 target_link_libraries(mysql_test ${MySQLConnectorCpp_LIBRARY} mysqlcppconn)
+
+
+add_executable(test_sql1 tests/test_sql1.cpp)
+target_link_libraries(test_sql1 ${MySQLConnectorCpp_LIBRARY} mysqlcppconn)
+
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
