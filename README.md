@@ -4,7 +4,7 @@
 Cero是采用c++构建的MySQL的ORM库.
 
 **项目架构:**<br>
-$~~~~~~$ ==> <a href=./framework.md>Cero:framework</a>
+$~~~~~~$ 👉 [Cero::framework](./framework.md)
 
 ## 设计目标
 一.  **构建一个性能不错的Mysql的ORM库**
