@@ -23,6 +23,7 @@ set( LIBS
 ## 编译源文件
 set(CERO_SOURCES
     sqlpool/Dbconn.cpp
+    sqlpool/ConnectionPool.cpp
 )
 
 
@@ -36,5 +37,9 @@ SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
 add_executable(test_conn tests/test_conn.cpp ${CERO_SOURCES})
 target_link_libraries(test_conn ${LIBS})
+
+add_executable(test_pool tests/test_pool.cpp ${CERO_SOURCES})
+target_link_libraries(test_pool ${LIBS})
+
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
