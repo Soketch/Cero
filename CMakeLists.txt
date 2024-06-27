@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.22.1)
 ## 项目名
 project(Cero)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include (cmake/utils.cmake)
 
 ## 设置 c++版本
 set(CMAKE_CXX_STANDARD 20)
@@ -28,13 +30,14 @@ set(CERO_SOURCES
     sqlpool/Dbconn.cpp
     sqlpool/ConnectionPool.cpp
     utils/util.cpp
+    src/log.cpp
 )
 
 
 #调试
 SET(CMAKE_BUILD_TYPE "Debug")
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb -Wno-builtin-macro-redefined ")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall -Wno-builtin-macro-redefined ")
 
 ## 输出路径
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -51,7 +54,13 @@ add_executable(test_json tests/test_json.cpp ${CERO_SOURCES})
 target_link_libraries(test_json ${LIBS})
 
 else()
+add_executable(test_temp tests/test_temp.cpp ${CERO_SOURCES})
+force_redefine_file_macro_for_sources(test_temp)
+target_link_libraries(test_temp ${LIBS})
 
+add_executable(test_log tests/test_log.cpp ${CERO_SOURCES})
+force_redefine_file_macro_for_sources(test_log)
+target_link_libraries(test_log ${LIBS})
 
 endif()
 
