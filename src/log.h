@@ -12,6 +12,15 @@
 #include <memory>
 #include <string>
 #include <list>
+#include <map>
+#include "utils/singleton.h"
+
+#define LOG_LEVEL(logger, level)                                              \
+    if (logger->getLevel() <= level)                                          \
+    LogEventWrap(logger, LogEvent::ptr(new LogEvent(                          \
+                             logger->getName(), level, __FILE__, __LINE__, 0, \
+                             syscall(SYS_gettid), 1, time(0))))               \
+        .getSS()
 
 namespace cero
 {
@@ -39,11 +48,12 @@ namespace cero
     public:
         using ptr = std::shared_ptr<LogEvent>;
 
-        LogEvent(LogLevel::Level level, const char *file,
+        LogEvent(const std::string &logname, LogLevel::Level level, const char *file,
                  int32_t line, uint32_t elapse,
                  uint32_t thread_id, uint32_t fiber_id,
                  uint64_t time);
 
+        const std::string &getLogName() { return m_logname; }
         const char *getFile() const { return m_file; }
         int32_t getLine() const { return m_line; }
         uint32_t getElapse() const { return m_elapse; }
@@ -51,8 +61,13 @@ namespace cero
         uint32_t getFiberId() const { return m_fiberId; }
         uint64_t getTime() const { return m_time; }
         LogLevel::Level getLevel() const { return m_level; }
+        Logger::ptr getLogger() { return m_logger; }
+
+        std::string getContent() const { return m_ss.str(); } // 【此处增加流对象转字符串！！！】
+        std::stringstream &getSS() { return m_ss; }           // 【此处增加流对象get方法提供流式调用！！！】
 
     private:
+        std::string m_logname;
         LogLevel::Level m_level;      // 日志级别
         const char *m_file = nullptr; // 文件号
         int32_t m_line = 0;           // 行号
@@ -60,6 +75,21 @@ namespace cero
         uint32_t m_threadId = 0;      // 线程号
         uint32_t m_fiberId = 0;       // 协程号
         uint64_t m_time = 0;          // 时间戳
+
+        std::stringstream m_ss;
+        Logger::ptr m_logger;
+    };
+
+    // 存放event的wrap
+    class LogEventWrap
+    {
+    public:
+        LogEventWrap(LogEvent::ptr e);
+        ~LogEventWrap();
+        std::stringstream &getSS();
+
+    private:
+        LogEvent::ptr m_event;
     };
 
     // 日志输出地类
@@ -69,9 +99,14 @@ namespace cero
         using ptr = std::shared_ptr<LogAppender>;
 
         virtual ~LogAppender() {}
-        virtual void log(LogEvent::ptr event) = 0; // 纯虚函数 -- 实现各个子类不一样，由各个子类自己决定
+        virtual void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) = 0; // 纯虚函数 -- 实现各个子类不一样，由各个子类自己决定
 
-    private:
+        void setFormatter(LogFormatter::ptr val) { m_formatter = val; }
+        LogFormatter::ptr getFormatter() const { return m_formatter; }
+
+    protected:
+        LogLevel::Level m_level = LogLevel::DEBUG;
+        LogFormatter::ptr m_formatter;
     };
 
     // 日志格式器类
@@ -131,7 +166,7 @@ namespace cero
     };
 
     // 日志器类
-    class Logger
+    class Logger : public std::enable_shared_from_this<Logger>
     {
     public:
         using ptr = std::shared_ptr<Logger>;
@@ -144,7 +179,7 @@ namespace cero
         void setLevel(const LogLevel::Level v) { m_level = v; }
 
         // 输出日志
-        void log(LogEvent::ptr event);
+        void log(LogLevel::Level level, LogEvent::ptr event);
         // 新增一个适配器
         void addAppender(LogAppender::ptr appender);
         // 删除一个适配器
@@ -157,6 +192,8 @@ namespace cero
 
         // Appender集合
         std::list<LogAppender::ptr> m_appenders;
+
+        Logger::ptr m_root;
     };
 
     // 输出到控制台日志类
@@ -164,7 +201,7 @@ namespace cero
     {
     public:
         using ptr = std::shared_ptr<StdoutLogAppender>;
-        void log(LogEvent::ptr event) override;
+        void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
     };
 
     // 输出到文件日志类
@@ -174,12 +211,28 @@ namespace cero
         using ptr = std::shared_ptr<FileLogAppender>;
 
         FileLogAppender(const std::string &filename);
-        void log(LogEvent::ptr event) override;
+        void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 
     private:
         // 日志输出的目的文件
         std::string m_filename;
     };
+
+    class LoggerManager
+    {
+    public:
+        LoggerManager();
+        Logger::ptr getLogger(const std::string &name);
+
+        void init();
+        Logger::ptr getRoot() const { return m_root; }
+
+    private:
+        std::map<std::string, Logger::ptr> m_loggers;
+        Logger::ptr m_root;
+    };
+
+    using LoggerMgr = cero::Singleton<LoggerManager>;
 }
 
 #endif

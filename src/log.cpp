@@ -1,10 +1,42 @@
 #include "log.h"
 #include <vector>
-#include <map>
 #include <functional>
 #include <sstream>
+
+#define RESET "\033[0m"
+#define BLACK "\033[30m"   /* Black */
+#define RED "\033[31m"     /* Red */
+#define GREEN "\033[32m"   /* Green */
+#define YELLOW "\033[33m"  /* Yellow */
+#define BLUE "\033[34m"    /* Blue */
+#define MAGENTA "\033[35m" /* Magenta */
+#define CYAN "\033[36m"    /* Cyan */
+#define WHITE "\033[37m"   /* White */
+// 定义日志级别和颜色的映射
+#define LOG_COLOR(level)                                                     \
+    ((level) == LogLevel::DEBUG ? BLUE : (level) == LogLevel::INFO ? GREEN   \
+                                     : (level) == LogLevel::WARN   ? YELLOW  \
+                                     : (level) == LogLevel::ERROR  ? RED     \
+                                     : (level) == LogLevel::FATAL  ? MAGENTA \
+                                                                   : RESET)
+
 namespace cero
 {
+
+    LogEventWrap::LogEventWrap(LogEvent::ptr e) : m_event(e)
+    {
+    }
+    LogEventWrap::~LogEventWrap()
+    {
+        if (m_event)
+        {
+            m_event->getLogger()->log(m_event->getLevel(), m_event);
+        }
+    }
+    std::stringstream &LogEventWrap::getSS()
+    {
+        return m_event->getSS();
+    }
 
     const char *LogLevel::ToString(LogLevel::Level level)
     {
@@ -50,8 +82,8 @@ namespace cero
 #undef XX
     }
 
-    LogEvent::LogEvent(LogLevel::Level level, const char *file, int32_t line, uint32_t elapse, uint32_t thread_id, uint32_t fiber_id, uint64_t time)
-        : m_level(level), m_file(file), m_line(line), m_elapse(elapse), m_threadId(thread_id), m_fiberId(fiber_id), m_time(time)
+    LogEvent::LogEvent(const std::string &logname, LogLevel::Level level, const char *file, int32_t line, uint32_t elapse, uint32_t thread_id, uint32_t fiber_id, uint64_t time)
+        : m_logname(logname), m_level(level), m_file(file), m_line(line), m_elapse(elapse), m_threadId(thread_id), m_fiberId(fiber_id), m_time(time)
     {
     }
 
@@ -92,7 +124,7 @@ namespace cero
         NameFormatItem(const std::string &str = "") {}
         void format(std::ostream &os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) override
         {
-            os << "Name";
+            os << event->getLogName();
         }
     };
 
@@ -204,13 +236,22 @@ namespace cero
           m_level(LogLevel::DEBUG) // 设置日志器默认级别DEBUG
     {
     }
-    void Logger::log(LogEvent::ptr event)
+    void Logger::log(LogLevel::Level level, LogEvent::ptr event)
     {
-        if (event->getLevel() >= m_level)
+        if (level >= m_level)
         {
-            for (auto &i : m_appenders)
+            auto self = shared_from_this();
+            // MutexType::Lock lock(m_mutex); // 加锁
+            if (!m_appenders.empty())
             {
-                i->log(event);
+                for (auto &i : m_appenders)
+                {
+                    i->log(self, level, event);
+                }
+            }
+            else if (m_root)
+            {
+                m_root->log(level, event);
             }
         }
     }
@@ -232,27 +273,23 @@ namespace cero
         }
     }
 
-    void StdoutLogAppender::log(LogEvent::ptr event)
+    void StdoutLogAppender::log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
     {
-        // 格式化时间
-        const std::string format = "%Y-%m-%d %H:%M:%S";
-        struct tm tm;
-        time_t t = event->getTime();
-        localtime_r(&t, &tm);
-        char tm_buf[64];
-        strftime(tm_buf, sizeof(tm_buf), format.c_str(), &tm);
+        if (level >= m_level)
+        {
+            // MutexType::Lock lock(m_mutex); // 加锁
 
-        std::cout
-            //<< event->getTime() << " "
-            << tm_buf << "    "
-            << event->getThreadId() << " "
-            << event->getFiberId() << " "
-            << "["
-            << LogLevel::ToString(event->getLevel())
-            << "] "
-            << event->getFile() << ":" << event->getLine() << " "
-            << "输出到控制台的信息"
-            << std::endl;
+            const char *color = LOG_COLOR(level); // 通过打印日志级别设置相应日志颜色
+            std::string formatted_message = m_formatter->format(logger, level, event);
+
+            // 对每行添加颜色重置
+            std::istringstream iss(formatted_message);
+            std::string line;
+            while (std::getline(iss, line))
+            {
+                std::cout << color << line << RESET << std::endl;
+            }
+        }
     }
 
     FileLogAppender::FileLogAppender(const std::string &filename)
@@ -260,7 +297,7 @@ namespace cero
     {
     }
 
-    void FileLogAppender::log(LogEvent::ptr event)
+    void FileLogAppender::log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event)
     {
         std::cout << "输出到文件：" << m_filename << std::endl;
     }
@@ -438,5 +475,17 @@ namespace cero
             i->format(ss, logger, level, event);
         }
         return ss.str();
+    }
+
+    LoggerManager::LoggerManager()
+    {
+        m_root.reset(new Logger);
+        m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+    }
+
+    Logger::ptr LoggerManager::getLogger(const std::string &name)
+    {
+        auto it = m_loggers.find(name);
+        return it == m_loggers.end() ? m_root : it->second;
     }
 }
