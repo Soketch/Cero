@@ -8,9 +8,9 @@
 
 #ifndef __LOG_H_
 #define __LOG_H_
+#include <iostream>
 #include <memory>
 #include <string>
-#include <iostream>
 #include <list>
 
 namespace cero
@@ -111,11 +111,23 @@ namespace cero
          * @param[in] level 日志级别
          * @param[in] event 日志事件
          */
-        std::string format();
+        std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event);
+
+        // format嵌套类
+        class FormatItem
+        {
+        public:
+            typedef std::shared_ptr<FormatItem> ptr;
+            // 有子类 需要虚析构
+            virtual ~FormatItem() {}
+            virtual void format(std::ostream &os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
+        };
 
     private:
         /// 日志格式模板
         std::string m_pattern;
+
+        std::vector<FormatItem::ptr> m_items;
     };
 
     // 日志器类
