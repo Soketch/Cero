@@ -6,14 +6,14 @@
 namespace cero
 {
     // 当前路径返回
-    std::string getCurPath()
+    std::string GetCurPath()
     {
         fs::path curPath = fs::current_path();
         return curPath;
     }
 
     // 返回当前日期时间
-    const std::string getCurrentdatetime()
+    const std::string GetCurrentdatetime()
     {
         const std::string format = "%Y-%m-%d %H:%M:%S";
         std::time_t t = std::time(nullptr); // 获取当前时间戳
@@ -30,7 +30,7 @@ namespace cero
      * @brief 获取当前本地日期时间的字符串表示
      * @return 返回格式为 "%Y-%m-%d %H:%M:%S" 的当前日期时间字符串
      */
-    const std::string getCurrentDateTime()
+    const std::string GetCurrentDateTime()
     {
         auto now = std::chrono::system_clock::now();                   // 获取当前时间点
         std::time_t now_c = std::chrono::system_clock::to_time_t(now); // 转换为time_t类型
@@ -40,14 +40,20 @@ namespace cero
         return ss.str();                                                  // 返回格式化后的时间字符串
     }
 
-    uint32_t getThreadId()
+    uint32_t GetThreadId()
     {
 
         return syscall(SYS_gettid);
     }
 
-    pid_t getProcessId()
+    pid_t GetProcessId()
     {
         return getpid();
     }
+
+    uint32_t GetFiberId()
+    {
+        return 0;
+    }
+
 }

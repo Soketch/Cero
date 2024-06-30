@@ -14,18 +14,45 @@
 #include <list>
 #include <map>
 #include "utils/singleton.h"
+#include "utils/util.h"
 
-#define LOG_LEVEL(logger, level)                                              \
-    if (logger->getLevel() <= level)                                          \
-    LogEventWrap(logger, LogEvent::ptr(new LogEvent(                          \
-                             logger->getName(), level, __FILE__, __LINE__, 0, \
-                             syscall(SYS_gettid), 1, time(0))))               \
+#define LOG_LEVEL(logger, level)                                                    \
+    if (logger->getLevel() <= level)                                                \
+    cero::LogEventWrap(logger, cero::LogEvent::ptr(new cero::LogEvent(              \
+                                   logger->getName(), level, __FILE__, __LINE__, 0, \
+                                   syscall(SYS_gettid), 1, time(0))))               \
         .getSS()
+
+#define LOG_DEBUG(logger) LOG_LEVEL(logger, cero::LogLevel::DEBUG)
+#define LOG_INFO(logger) LOG_LEVEL(logger, cero::LogLevel::INFO)
+#define LOG_WARN(logger) LOG_LEVEL(logger, cero::LogLevel::WARN)
+#define LOG_ERROR(logger) LOG_LEVEL(logger, cero::LogLevel::ERROR)
+#define LOG_FATAL(logger) LOG_LEVEL(logger, cero::LogLevel::FATAL)
+
+#define LOG_FMT_LEVEL(logger, level, fmt, ...)                                                            \
+    if (logger->getLevel() <= level)                                                                      \
+    cero::LogEventWrap(cero::LogEvent::ptr(new cero::LogEvent(logger, level,                              \
+                                                              __FILE__, __LINE__, 0, cero::GetThreadId(), \
+                                                              cero::GetFiberId(), time(0), "Thread")))    \
+        .getEvent()                                                                                       \
+        ->format(fmt, __VA_ARGS__)
+
+#define LOG_FMT_DEBUG(logger, fmt, ...) LOG_FMT_LEVEL(logger, sylar::LogLevel::DEBUG, fmt, __VA_ARGS__)
+#define LOG_FMT_INFO(logger, fmt, ...) LOG_FMT_LEVEL(logger, sylar::LogLevel::INFO, fmt, __VA_ARGS__)
+#define LOG_FMT_WARN(logger, fmt, ...) LOG_FMT_LEVEL(logger, sylar::LogLevel::WARN, fmt, __VA_ARGS__)
+#define LOG_FMT_ERROR(logger, fmt, ...) LOG_FMT_LEVEL(logger, sylar::LogLevel::ERROR, fmt, __VA_ARGS__)
+#define LOG_FMT_FATAL(logger, fmt, ...) LOG_FMT_LEVEL(logger, sylar::LogLevel::FATAL, fmt, __VA_ARGS__)
+
+// 通过宏获取logger  m_root
+#define LOG_ROOT() cero::LoggerMgr::GetInstance()->getRoot()
+
+// find log
+#define LOG_NAME(name) cero::LoggerMgr::GetInstance()->getLogger(name)
 
 namespace cero
 {
     class Logger;
-
+    class LoggerManager;
     // 日志等级（级别）类
     class LogLevel
     {
